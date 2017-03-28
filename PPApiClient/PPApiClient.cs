@@ -1,11 +1,13 @@
 using System;
+using PPApiClient.Entity;
+using PPApiClient.Storage;
+using PPApiClient.ValueObject.Request;
+using PPApiClient.ValueObjects.Response;
 using RestSharp;
 using RestSharp.Authenticators;
 
-namespace PPAPI_Client
-{
-	public class PPApiClient
-	{
+namespace PPApiClient {
+	public class PPApiClient {
 		const int TOKEN_EXPIRE_SEC = 1800; //30 * 60;  //30 minutes
 		const string BASE_URL = "https://api.pchomepay.com.tw/v1";
 		const string SB_BASE_URL = "https://sandbox-api.pchomepay.com.tw/v1";
@@ -22,7 +24,7 @@ namespace PPAPI_Client
 		string postWithdrawURL;
 		string getCheckingURL;
 		string getBalanceURL;
-		string userAuth;
+		// string userAuth;
 
 		string secret;
 
@@ -30,18 +32,22 @@ namespace PPAPI_Client
 
 		string baseURL;
 
-		TokenPostRspVO token;
+		TokenEntity tokenObj;
+        private ITokenStorage tokenStorage;
 
+		public PPApiClient(string userId,
+			string secret,
+			bool sandBox) : this(userId, secret, null, sandBox){
+				
+			}
 
+        public PPApiClient(string userId,
+			string secret,
+			ITokenStorage tokenStorage = null, 
+			bool sandBox = false) {
+			baseURL = sandBox ? SB_BASE_URL : BASE_URL;
 
-		public PPApiClient(string userId, 
-		                   string secret, 
-		                   //ITokenStorage tokenStorage = null, 
-		                   bool sandBox = false)
-		{
-			baseURL = sandBox?  SB_BASE_URL : BASE_URL;
-
-	        this.tokenURL = "/token";
+			this.tokenURL = "/token";
 			this.postPaymentURL = "/payment";
 			this.getPaymentURL = "/payment/{order_id}";
 			this.postPaymentAtmVAURL = "/payment/atmva";
@@ -56,90 +62,139 @@ namespace PPAPI_Client
 
 			this.userId = userId;
 			this.secret = secret;
-			//if ($tokenStorage == null) {
-	  //          $tokenStorage = new SessionTokenStorage();
-			//}
 
-	  //      $this->tokenStorage = $tokenStorage;
-
-	  //      $this->ignoreSSL = $ignoreSSL;
+			if (tokenStorage == null) {
+			         this.tokenStorage = new NullTokenStorage();
+			}
 		}
 
 
-		public void getToken()
-		{
+
+		private void getToken() {
 			var client = new RestClient(this.baseURL);
 
 			client.Authenticator = new HttpBasicAuthenticator(this.userId, this.secret);
 
 			var request = new RestRequest(this.tokenURL, Method.POST);
-			var response = client.Execute<TokenPostRspVO>(request);
-			if (response.ErrorException != null)
-			{
+			var response = client.Execute < TokenPostRspVO > (request);
+			if (response.ErrorException != null) {
 				Console.Out.Write(response.ErrorException);
 				var message = response.Content;
 				var ppException = new ApplicationException(message, response.ErrorException);
 				throw ppException;
 			}
 
-			this.token = response.Data; // raw content as string
+			this.tokenObj = new TokenEntity(response.Content); // raw content as string
 
-			Console.Out.Write(token.ToString());
+			Console.Out.Write(tokenObj.getJson());
 		}
 
-		public RefundGetRspVO postPayment(IPaymentReqVO vo)
-		{
-			var request = new RestRequest(this.getRefundURL, Method.POST);
-			request.AddObject(vo);
-			return this.Execute<RefundGetRspVO>(request);
+		public PaymentPostRspVO postPayment(PaymentPostReqVO data) {
+			var request = new RestRequest(this.postPaymentURL, Method.POST);
+			request.AddObject(data);
+			return this.Execute < PaymentPostRspVO > (request);
 		}
-
-		public RefundGetRspVO getRefund(string refudId)
-		{
-			var request = new RestRequest(this.getRefundURL, Method.POST);
-			request.AddParameter("refund_id", refudId);
-			return this.Execute<RefundGetRspVO>(request);
+		public AtmVAccountPostRspVO postPaymentAtmVA(AtmVAccountPostReqVO data) {
+			var request = new RestRequest(this.postPaymentAtmVAURL, Method.POST);
+			request.AddObject(data);
+			return this.Execute < AtmVAccountPostRspVO > (request);
 		}
-
-		public TokenPostRspVO getTokenObject()
-		{
-			/// <summary>
-			/// 
-			/// </summary>
-			/// <TODO>
-			/// add code to cache token
-			/// </TODO>
-			/// <param name="request">Request.</param>
-			/// <typeparam name="T">The 1st type parameter.</typeparam>
-
-			if (this.token == null)
-			{
-				this.getToken();
+		public PaymentAuditPostRspVO postPaymentAudit(PaymentAuditPostReqVO data) {
+			var request = new RestRequest(this.postPaymentAuditURL, Method.POST);
+			request.AddObject(data);
+			return this.Execute < PaymentAuditPostRspVO > (request);
+		}
+		public RefundPostRspVO postRefund(RefundPostReqVO data) {
+			var request = new RestRequest(this.postRefundURL, Method.POST);
+			request.AddObject(data);
+			return this.Execute < RefundPostRspVO > (request);
+		}
+		public WithdrawPostRspVO postWithdraw(int amount) {
+			var data = new WithdrawPostReqVO();
+			data.amount = amount;
+			var request = new RestRequest(this.postWithdrawURL, Method.POST);
+			request.AddObject(data);
+			return this.Execute < WithdrawPostRspVO > (request);
+		}
+		public PaymentGetRspVO getPayment(string orderId) {
+			if (orderId.Trim() == "") {
+				throw new ApplicationException("Order does not exist!");
 			}
 
-			return this.token;
+			var data = new PaymentGetReqVO(orderId);
+
+			var request = new RestRequest(this.getPaymentURL, Method.GET);
+			request.AddObject(data);
+			return this.Execute < PaymentGetRspVO > (request);
+		}
+		public AtmBanksGetRspVO getPaymentAtmBanks() {
+			var request = new RestRequest(this.getPaymentAtmBanksURL, Method.GET);
+			return this.Execute < AtmBanksGetRspVO > (request);
+		}
+		public CardBanksGetRspVO getPaymentCardBanks() {
+			var request = new RestRequest(this.getPaymentCardBanksURL, Method.GET);
+			return this.Execute < CardBanksGetRspVO > (request);
 		}
 
-		private T Execute<T>(RestRequest request) where T : new()
-		{
+		public RefundGetRspVO getRefund(string refudId) {
+			var request = new RestRequest(this.getRefundURL, Method.GET);
+			request.AddParameter("refund_id", refudId);
+			return this.Execute < RefundGetRspVO > (request);
+		}
+
+		public CheckingGetRspVO getChecking(CheckingGetReqVO data) {
+			var request = new RestRequest(this.getCheckingURL, Method.GET);
+			request.AddObject(data);
+			return this.Execute < CheckingGetRspVO > (request);
+		}
+		public BalanceGetRspVO getBalance() {
+			var request = new RestRequest(this.getBalanceURL, Method.GET);
+			return this.Execute < BalanceGetRspVO > (request);
+		}
+
+		private TokenEntity TokenObj{
+			get{
+				var tokenFail = false;
+
+        		//從 storage 取得資料
+        		if (this.tokenObj == null) {
+            		var str = this.tokenStorage.getTokenStr(); 
+					if(str.Trim() != ""){
+						this.tokenObj = new TokenEntity(str);
+					}else{
+						tokenFail = true;
+					}
+				}
+
+				//如果沒有資料 或 token 快過期時 , 取得新的 token
+				if (tokenFail ||
+					this.tokenObj == null  ||
+					this.tokenObj.willExpiredIn(TOKEN_EXPIRE_SEC)) {
+						this.getToken();
+						this.tokenStorage.saveTokenStr(this.tokenObj.getJson());
+				}
+
+				return this.tokenObj;
+			}
+            
+        }
+
+		private T Execute < T > (RestRequest request) where T: new() {
 			var client = new RestClient();
 			client.BaseUrl = new System.Uri(baseURL);
 
-			var tokenObj = this.getTokenObject();
+			//var tokenObj = this.getTokenObject();
 
-			request.AddHeader("pcpay-token",  tokenObj.token);
+			request.AddHeader("pcpay-token", this.TokenObj.getToken());
 
-			var response = client.Execute<T>(request);
+			var response = client.Execute < T > (request);
 
-			if (response.ErrorException != null)
-			{
+			if (response.ErrorException != null) {
 				string message = response.Content;
 				var ppException = new ApplicationException(message, response.ErrorException);
 				throw ppException;
 			}
 			return response.Data;
 		}
-
-
 	}
 }

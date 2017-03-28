@@ -1,15 +1,10 @@
-﻿using System;
-namespace PPAPI_Client
-{
-	public class TokenPostRspVO : ResponseBaseVO
-	{
-		public string token;
-		public int expired_in;
-		public int expired_timestamp;
+using System;
 
-		public TokenPostRspVO()
-		{
-			
-		}
-	}
+namespace PPApiClient.ValueObjects.Response {
+
+   public class TokenPostRspVO {
+        public string token;
+        public int expired_in;
+        public int expired_timestamp;
+    }
 }

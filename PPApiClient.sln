@@ -1,7 +1,7 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPAPI_Client", "PPAPI_Client\PPAPI_Client.csproj", "{04DE81CE-C327-488C-AB52-0D45C394E597}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPApiClient", "PPApiClient\PPApiClient.csproj", "{04DE81CE-C327-488C-AB52-0D45C394E597}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPApiExample", "PPApiExample\PPApiExample.csproj", "{59EC81F7-DB1B-4126-9D56-99AB6B6D16AA}"
 EndProject

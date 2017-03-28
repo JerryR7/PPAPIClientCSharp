@@ -1,5 +1,5 @@
 ﻿using System;
-namespace PPAPI_Client
+namespace PPApiClient
 {
 	public class ResponseBaseVO
 	{
