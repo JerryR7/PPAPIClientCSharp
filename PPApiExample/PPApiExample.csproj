@@ -34,9 +34,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PPAPI_Client\PPAPI_Client.csproj">
+    <ProjectReference Include="..\PPApiClient\PPApiClient.csproj">
       <Project>{04DE81CE-C327-488C-AB52-0D45C394E597}</Project>
-      <Name>PPAPI_Client</Name>
+      <Name>PPApiClient</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
